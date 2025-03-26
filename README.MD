@@ -156,3 +156,48 @@ This project is provided under MIT License with the following additional terms:
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+
+## window 本地通过 Docker Desktop 部署
+
+1. 确保本地已安装 [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/)
+
+
+2. 克隆项目
+
+```bash
+git clone https://github.com/Damao2250/wxocr.git
+```
+
+3. 通过 Dockerfile 构建镜像（确保在 Dockerfile 目录下），`-t` 后的 `wxocr` 为镜像名字可自定义
+
+```bash
+docker build -t wxocr .
+```
+
+4. 启动容器，`--name` 后的 `wxocr-api` 为容器名字，端口后的 `wxocr` 为镜像名字
+
+```bash
+docker run -d --name wxocr-api -p 5050:5050 wxocr
+```
+
+5. 访问
+
+页面访问：http://localhost:5050
+
+api请求
+
+```js
+const data = {
+  image: 'BASE64_ENCODED_IMAGE_DATA' // 替换为实际的 Base64 编码后的图片数据(即不要前面这段  data:image/png;base64,  )
+};
+axios.post('http://localhost:5050/ocr', data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+.then(response => {
+  console.log('响应数据：', response.data);
+})
+```
+
