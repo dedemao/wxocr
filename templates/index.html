@@ -55,6 +55,7 @@
       max-height: 400px;
       margin: 20px 0;
       border-radius: 8px;
+      cursor: pointer;
       display: none;
     }
 
@@ -91,10 +92,14 @@
       border: 1px solid #ccc;
       border-radius: 5px;
       margin-bottom: 20px;
-      max-height: 300px;
-      overflow-y: scroll;
+      max-height: 400px;
       padding: 10px;
       display: none;
+    }
+
+    #resultTextContent {
+      max-height: 325px;
+      overflow-y: auto;
     }
 
     .result-table {
@@ -128,6 +133,21 @@
       margin: 10px 0;
       display: none;
     }
+
+    .copy-btn {
+      display: block;
+      padding: 5px 10px;
+      margin: 10px auto;
+      cursor: pointer;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+
+    .copy-btn:hover {
+      background-color: #1bc56d;
+    }
   </style>
 </head>
 
@@ -156,6 +176,8 @@
 
     <!-- 结果显示 -->
     <div id="resultText">
+      <button id="copyBtn" class="copy-btn">复制内容</button>
+      <div id="resultTextContent"></div>
     </div>
     <table class="result-table" id="resultTable">
       <thead>
@@ -275,7 +297,8 @@
       const tbody = document.getElementById('resultBody');
       tbody.innerHTML = '';
       const resultText = document.getElementById('resultText');
-      resultText.innerHTML = '';
+      const resultTextContent = document.getElementById('resultTextContent');
+      resultTextContent.innerHTML = '';
       resultData.ocr_response.forEach(item => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -286,8 +309,8 @@
                 `;
         tbody.appendChild(row);
         const span = document.createElement('span');
-        span.innerHTML = item.text.replace(/\r/g, '')+'<br>'
-        resultText.appendChild(span);
+        span.innerHTML = item.text.replace(/\r/g, '') + '<br>'
+        resultTextContent.appendChild(span);
       });
       resultText.style.display = 'block';
       document.getElementById('resultTable').style.display = 'table';
@@ -346,6 +369,154 @@
         "width": 392
       }
     }, null, 2);
+
+
+    // 图片预览
+    // 创建模态框样式
+    const style = document.createElement('style');
+    style.textContent = `
+      .preview-modal {
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0, 0, 0, 0.8);
+          z-index: 1000;
+          cursor: pointer;
+      }
+
+      .preview-modal img {
+          max-width: 90%;
+          max-height: 90%;
+          margin: auto;
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          transform-origin: center center;
+          cursor: move;
+      }
+      `;
+    document.head.appendChild(style);
+
+    // 创建模态框
+    const modal = document.createElement('div');
+    modal.className = 'preview-modal';
+    const modalImg = document.createElement('img');
+    modal.appendChild(modalImg);
+    document.body.appendChild(modal);
+
+    // 获取预览图片元素
+    const previewImg = document.getElementById('preview');
+
+    // 图片缩放和拖动相关变量
+    let scale = 1;
+    const SCALE_STEP = 0.1;
+    const MIN_SCALE = 0.5;
+    const MAX_SCALE = 3.5;
+    let isDragging = false;
+    let startX, startY;
+    let translateX = 0;
+    let translateY = 0;
+
+    // 添加点击事件
+    previewImg.addEventListener('click', function () {
+      modal.style.display = 'block';
+      modalImg.src = this.src;
+      // 重置所有变量
+      scale = 1;
+      translateX = 0;
+      translateY = 0;
+      updateImageTransform();
+    });
+
+    // 更新图片变换
+    function updateImageTransform() {
+      modalImg.style.transform = `translate(calc(-50% + ${translateX}px), calc(-50% + ${translateY}px)) scale(${scale})`;
+    }
+
+    // 点击模态框关闭
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) {
+        this.style.display = 'none';
+      }
+    });
+
+    // 添加滚轮缩放
+    modalImg.addEventListener('wheel', function (e) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -1 : 1;
+      const newScale = scale + (delta * SCALE_STEP);
+
+      if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
+        scale = newScale;
+        updateImageTransform();
+      }
+    });
+
+    // 添加拖动相关事件
+    modalImg.addEventListener('mousedown', function (e) {
+      if (e.button === 0) { // 只响应左键
+        isDragging = true;
+        startX = e.clientX - translateX;
+        startY = e.clientY - translateY;
+        modalImg.style.cursor = 'grabbing';
+      }
+    });
+
+    document.addEventListener('mousemove', function (e) {
+      if (isDragging) {
+        translateX = e.clientX - startX;
+        translateY = e.clientY - startY;
+        updateImageTransform();
+      }
+    });
+
+    document.addEventListener('mouseup', function () {
+      if (isDragging) {
+        isDragging = false;
+        modalImg.style.cursor = 'move';
+      }
+    });
+
+    // 防止拖动时选中图片
+    modalImg.addEventListener('dragstart', function (e) {
+      e.preventDefault();
+    });
+
+    // 添加复制功能
+    const copyBtn = document.getElementById('copyBtn');
+    // 添加复制功能
+    copyBtn.addEventListener('click', function () {
+      // 创建临时容器
+      const tempDiv = document.createElement('div');
+
+      // 克隆所有子元素（除了按钮）并保持换行
+      const textParts = [];
+      Array.from(resultTextContent.children).forEach(child => {
+        textParts.push(child.textContent);
+      });
+
+      // 使用换行符连接文本
+      const textToCopy = textParts.join('\n');
+
+      // 复制到剪贴板
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = '复制成功！';
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+        }, 2000);
+      }).catch(err => {
+        console.error('复制失败:', err);
+        copyBtn.textContent = '复制失败';
+        setTimeout(() => {
+          copyBtn.textContent = '复制内容';
+        }, 2000);
+      });
+    });
   </script>
 </body>
 
