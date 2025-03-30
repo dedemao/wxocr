@@ -14,6 +14,8 @@ COPY templates /app/templates
 
 COPY main.py /app/main.py
 
+RUN chmod +x /app/wx/opt/wechat/wxocr
+
 WORKDIR /app
 
 CMD ["python", "main.py"]
